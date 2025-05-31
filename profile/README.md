@@ -276,7 +276,7 @@ This phase involves configuring environment variables, setting up a GitHub Runne
      AWS_SECRET_ACCESS_KEY=<your-avatar-secret-access-key>
      AWS_REGION=ap-southeast-1
      S3_BUCKET_NAME=gearment-app-user-avatars-bucket
-    ```
+     ```
 
 2. **Set Up GitHub Runner**:
    - On EC2, install a GitHub Runner for the `gearment-th1enlm02` organization:

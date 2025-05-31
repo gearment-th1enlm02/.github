@@ -256,33 +256,27 @@ This phase involves configuring environment variables, setting up a GitHub Runne
      nano gearment-ui/.env
      ```
      - Content (replace with your back-end domain if different):
-       ```env
-       VITE_APP_API_URL=https://gearment-api.th1enlm02devops.engineer
-       ```
+     ```env
+     VITE_APP_API_URL=https://gearment-api.th1enlm02devops.engineer
+     ```
      ```bash
      nano gearment-app/.env
      ```
      - Content (replace S3 keys with `gearment-app-avatar-user` values from `s3_access_keys.json` and use your JWT secret):
-       ```env
-       SERVER_PORT=5001
-       MONGO_USER=gearment-admin
-       MONGO_PASSWORD=gearment-admin
-       MONGO_HOST=mongo
-       MONGO_PORT=27017
-       MONGO_DATABASE=gearment
-       JWT_SECRET=<your-jwt-secret>
-       FRONTEND_URL=https://gearment.th1enlm02devops.engineer
-       AWS_ACCESS_KEY_ID=<your-avatar-access-key-id>
-       AWS_SECRET_ACCESS_KEY=<your-avatar-secret-access-key>
-       AWS_REGION=ap-southeast-1
-       S3_BUCKET_NAME=gearment-app-user-avatars-bucket
-       ```
-   - Restart Docker containers to apply changes:
-     ```bash
-     cd ~/app
-     sudo docker-compose down
-     sudo docker-compose up -d
-     ```
+     ```env
+     SERVER_PORT=5001
+     MONGO_USER=gearment-admin
+     MONGO_PASSWORD=gearment-admin
+     MONGO_HOST=mongo
+     MONGO_PORT=27017
+     MONGO_DATABASE=gearment
+     JWT_SECRET=<your-jwt-secret>
+     FRONTEND_URL=https://gearment.th1enlm02devops.engineer
+     AWS_ACCESS_KEY_ID=<your-avatar-access-key-id>
+     AWS_SECRET_ACCESS_KEY=<your-avatar-secret-access-key>
+     AWS_REGION=ap-southeast-1
+     S3_BUCKET_NAME=gearment-app-user-avatars-bucket
+    ```
 
 2. **Set Up GitHub Runner**:
    - On EC2, install a GitHub Runner for the `gearment-th1enlm02` organization:
@@ -334,72 +328,72 @@ This phase involves configuring environment variables, setting up a GitHub Runne
      sudo nano /usr/local/bin/mongo_backup.sh
      ```
      - Content (replace S3 keys with `gearment-app-backup-user` values from `s3_access_keys.json`):
-       ```bash
-       #!/bin/bash
-       DB_NAME="gearment"
-       CONTAINER_NAME="mongo"
-       AWS_ACCESS_KEY_ID=<your-backup-access-key-id>
-       AWS_SECRET_ACCESS_KEY=<your-backup-secret-access-key>
-       AWS_REGION=ap-southeast-1
-       BACKUP_DIR="/tmp/mongo_backup"
-       S3_BUCKET="s3://gearment-app-db-backups-bucket"
-       TIMESTAMP=$(date +%Y%m%d_%H%M)
-       BACKUP_FILE="gearment_${TIMESTAMP}.tar.gz"
-       LOG_FILE="/var/log/mongo-backup.log"
-       MONGO_USER="gearment-admin"
-       MONGO_PASS="gearment-admin"
+     ```bash
+     #!/bin/bash
+     DB_NAME="gearment"
+     CONTAINER_NAME="mongo"
+     AWS_ACCESS_KEY_ID=<your-backup-access-key-id>
+     AWS_SECRET_ACCESS_KEY=<your-backup-secret-access-key>
+     AWS_REGION=ap-southeast-1
+     BACKUP_DIR="/tmp/mongo_backup"
+     S3_BUCKET="s3://gearment-app-db-backups-bucket"
+     TIMESTAMP=$(date +%Y%m%d_%H%M)
+     BACKUP_FILE="gearment_${TIMESTAMP}.tar.gz"
+     LOG_FILE="/var/log/mongo-backup.log"
+     MONGO_USER="gearment-admin"
+     MONGO_PASS="gearment-admin"
 
-       mkdir -p "$BACKUP_DIR"
-       chmod 755 "$BACKUP_DIR"
+     mkdir -p "$BACKUP_DIR"
+     chmod 755 "$BACKUP_DIR"
 
-       log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }
+     log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }
 
-       if ! sudo -n true 2>/dev/null; then
-           log "ERROR: Script requires sudo privileges"
-           exit 1
-       fi
+     if ! sudo -n true 2>/dev/null; then
+        log "ERROR: Script requires sudo privileges"
+        exit 1
+     fi
 
-       log "Starting MongoDB backup for $DB_NAME"
+     log "Starting MongoDB backup for $DB_NAME"
 
-       if ! sudo docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-           log "ERROR: Container $CONTAINER_NAME is not running"
-           exit 1
-       fi
+     if ! sudo docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+        log "ERROR: Container $CONTAINER_NAME is not running"
+        exit 1
+     fi
 
-       log "Dumping database $DB_NAME from container $CONTAINER_NAME..."
-       DUMP_CMD="sudo docker exec $CONTAINER_NAME mongodump --host 127.0.0.1 --port 27017 --db $DB_NAME --username $MONGO_USER --password $MONGO_PASS --authenticationDatabase admin --out /tmp/$DB_NAME"
-       if ! $DUMP_CMD 2>> "$LOG_FILE"; then
-           log "ERROR: mongodump failed"
-           exit 1
-       fi
+     log "Dumping database $DB_NAME from container $CONTAINER_NAME..."
+     DUMP_CMD="sudo docker exec $CONTAINER_NAME mongodump --host 127.0.0.1 --port 27017 --db $DB_NAME --username $MONGO_USER --password $MONGO_PASS --authenticationDatabase admin --out /tmp/$DB_NAME"
+     if ! $DUMP_CMD 2>> "$LOG_FILE"; then
+        log "ERROR: mongodump failed"
+        exit 1
+     fi
 
-       log "Copying dump to host..."
-       if ! sudo docker cp "$CONTAINER_NAME:/tmp/$DB_NAME" "$BACKUP_DIR/" 2>> "$LOG_FILE"; then
-           log "ERROR: Failed to copy dump from container"
-           exit 1
-       fi
+     log "Copying dump to host..."
+     if ! sudo docker cp "$CONTAINER_NAME:/tmp/$DB_NAME" "$BACKUP_DIR/" 2>> "$LOG_FILE"; then
+        log "ERROR: Failed to copy dump from container"
+        exit 1
+     fi
 
-       log "Cleaning up container..."
-       sudo docker exec "$CONTAINER_NAME" rm -rf "/tmp/$DB_NAME"
+     log "Cleaning up container..."
+     sudo docker exec "$CONTAINER_NAME" rm -rf "/tmp/$DB_NAME"
 
-       log "Compressing backup to $BACKUP_FILE..."
-       cd "$BACKUP_DIR" || exit 1
-       if ! tar -czf "$BACKUP_FILE" "$DB_NAME" 2>> "$LOG_FILE"; then
-           log "ERROR: Compression failed"
-           exit 1
-       fi
+     log "Compressing backup to $BACKUP_FILE..."
+     cd "$BACKUP_DIR" || exit 1
+     if ! tar -czf "$BACKUP_FILE" "$DB_NAME" 2>> "$LOG_FILE"; then
+        log "ERROR: Compression failed"
+        exit 1
+     fi
 
-       log "Uploading $BACKUP_FILE to $S3_BUCKET..."
-       if ! sudo docker run --rm -v "$(pwd)":/aws -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" -e AWS_DEFAULT_REGION="$AWS_REGION" amazon/aws-cli s3 cp "/aws/$BACKUP_FILE" "$S3_BUCKET/$BACKUP_FILE" 2>> "$LOG_FILE"; then
-           log "ERROR: S3 upload failed"
-           exit 2
-       fi
+     log "Uploading $BACKUP_FILE to $S3_BUCKET..."
+     if ! sudo docker run --rm -v "$(pwd)":/aws -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" -e AWS_DEFAULT_REGION="$AWS_REGION" amazon/aws-cli s3 cp "/aws/$BACKUP_FILE" "$S3_BUCKET/$BACKUP_FILE" 2>> "$LOG_FILE"; then
+        log "ERROR: S3 upload failed"
+        exit 2
+     fi
 
-       log "Cleaning up..."
-       rm -rf "$BACKUP_DIR/$DB_NAME" "$BACKUP_FILE"
+     log "Cleaning up..."
+     rm -rf "$BACKUP_DIR/$DB_NAME" "$BACKUP_FILE"
 
-       log "Backup completed successfully"
-       ```
+     log "Backup completed successfully"
+     ```
    - Set permissions:
      ```bash
      sudo chmod +x /usr/local/bin/mongo_backup.sh
@@ -411,25 +405,25 @@ This phase involves configuring environment variables, setting up a GitHub Runne
      crontab -e
      ```
      - Add:
-       ```
-       0 19 * * * sudo /usr/local/bin/mongo_backup.sh
-       ```
+     ```
+     0 19 * * * sudo /usr/local/bin/mongo_backup.sh
+     ```
    - Configure sudoers:
      ```bash
      sudo visudo
      ```
      - Add:
-       ```
-       ubuntu ALL=(ALL) NOPASSWD: /usr/local/bin/mongo_backup.sh, /usr/bin/docker
-       ```
+     ```
+     ubuntu ALL=(ALL) NOPASSWD: /usr/local/bin/mongo_backup.sh, /usr/bin/docker
+     ```
    - Verify backup:
      ```bash
      sudo /usr/local/bin/mongo_backup.sh
      ```
      - Check logs:
-       ```bash
-       cat /var/log/mongo-backup.log
-       ```
+     ```bash
+     cat /var/log/mongo-backup.log
+     ```
      - Troubleshoot:
        - Ensure MongoDB container is running: `sudo docker ps`.
 
@@ -459,9 +453,9 @@ This phase involves configuring environment variables, setting up a GitHub Runne
      sudo systemctl status actions-runner.service
      ```
      - Start if not running:
-       ```bash
-       sudo systemctl start actions-runner.service
-       ```
+     ```bash
+     sudo systemctl start actions-runner.service
+     ```
 
 3. **Review Workflow Files**:
    - Ensure workflow files exist:

@@ -1,5 +1,5 @@
 ## Overview
-This is a project that deploys a web application on AWS, featuring a React front-end, Node.js back-end, and MongoDB database, all containerized with Docker. Infrastructure is provisioned via Terraform, with Nginx as a reverse proxy, automated MongoDB backups to S3, and CI/CD pipelines using GitHub Actions. This README provides a clear deployment guide for the project, hosted across three repositories in the [gearment-th1enlm02](https://github.com/gearment-th1enlm02) organization:
+This project deploys a web application on AWS, featuring a React front-end, Node.js back-end, and MongoDB database, all containerized with Docker. Infrastructure is provisioned via Terraform, with Nginx as a reverse proxy, automated MongoDB backups to S3, and CI/CD pipelines using GitHub Actions. This README provides a clear deployment guide for the project, hosted across three repositories in the [gearment-th1enlm02](https://github.com/gearment-th1enlm02) organization:
 
 - [gearment-terraform](https://github.com/gearment-th1enlm02/gearment-terraform): AWS infrastructure setup.
 - [gearment-hello-world-ui](https://github.com/gearment-th1enlm02/gearment-hello-world-ui): Front-end application.
@@ -25,7 +25,7 @@ This is a project that deploys a web application on AWS, featuring a React front
 - **VPC**:
   - CIDR: `10.0.0.0/16`
   - Public Subnet: `10.0.1.0/24`
-  - Components: Internet Gateway, Route Table
+  - Components: Internet Gateway, Route Table, Gateway Endpoint for S3 (routes S3 traffic internally within AWS)
 - **Repository**: [gearment-terraform](https://github.com/gearment-th1enlm02/gearment-terraform)
 
 <p align="center">
@@ -176,13 +176,14 @@ This phase provisions AWS infrastructure using Terraform and automatically insta
 6. **Initialize and Apply Terraform**:
    ```bash
    terraform plan
-   terraform apply -auto-approve
+   terraform apply --auto-approve
    ```
    - This provisions:
      - EC2 instance (t2.micro, Ubuntu 22.04, private IP `10.0.1.10`).
      - S3 buckets (`gearment-app-user-avatars-bucket`, `gearment-app-db-backups-bucket`).
      - IAM users (`gearment-app-avatar-user`, `gearment-app-backup-user`).
-     - VPC, Security Group, and Route Table.
+     - VPC, Security Group, Route Table, and Gateway Endpoint for S3 (routes traffic to S3 buckets internally within AWS).
+   - Note: For your setup, use your own bucket names in the endpoint policy.
 
 7. **Retrieve S3 Access Keys**:
    - Export IAM user access keys to a JSON file:
@@ -505,6 +506,62 @@ This phase involves configuring environment variables, setting up a GitHub Runne
      - Front-end: [https://gearment.th1enlm02devops.engineer](https://gearment.th1enlm02devops.engineer)
      - Back-end: [https://gearment-api.th1enlm02devops.engineer](https://gearment-api.th1enlm02devops.engineer)
 
+## Verify Application via Browser
+Access the front-end at [https://gearment.th1enlm02devops.engineer](https://gearment.th1enlm02devops.engineer) (replace with your domain if different) and perform the following actions:
+
+### Login Interface
+<p align="center">
+  <img src="../images/ui-login.png" alt="Login Interface"/>
+</p>
+
+### Register Interface
+<p align="center">
+  <img src="../images/ui-register.png" alt="Register Interface"/>
+</p>
+
+### User Profile
+<p align="center">
+  <img src="../images/ui-profile.png" alt="User Profile"/>
+</p>
+
+### Upload Avatar
+<p align="center">
+  <img src="../images/ui-upload-avatar.png" alt="Upload Avatar"/>
+</p>
+
+## Clean-Up Process
+To avoid unnecessary costs, follow these steps to remove all AWS resources.
+
+### Steps
+1. **Empty S3 Buckets**:
+   - Log in to AWS Console and navigate to S3.
+   - For each bucket (`gearment-app-user-avatars-bucket`, `gearment-app-db-backups-bucket`):
+     - Select all objects and delete them.
+     - Alternatively, use AWS CLI (replace `<your-access-key>` and `<your-secret-key>` with `gearment-app-backup-user` credentials from `s3_access_keys.json`):
+       ```bash
+       aws configure set aws_access_key_id <your-access-key>
+       aws configure set aws_secret_access_key <your-secret-key>
+       aws configure set region ap-southeast-1
+       aws s3 rm s3://gearment-app-user-avatars-bucket --recursive
+       aws s3 rm s3://gearment-app-db-backups-bucket --recursive
+       ```
+     - Note: Replace with your own bucket names if using a different context.
+
+2. **Destroy Terraform Resources**:
+   - In the `gearment-terraform` directory:
+     ```bash
+     cd gearment-terraform
+     terraform destroy --auto-approve
+     ```
+   - This removes:
+     - EC2 instance, S3 buckets, IAM users, VPC, Security Group, and S3 Gateway Endpoint.
+
+3. **Verify Resource Deletion**:
+   - In AWS Console:
+     - **EC2**: Instances > Check no instances exist.
+     - **S3**: Buckets > Confirm `gearment-app-user-avatars-bucket` and `gearment-app-db-backups-bucket` are deleted.
+     - **IAM**: Users > Confirm `gearment-app-avatar-user` and `gearment-app-backup-user` are deleted.
+     - **VPC**: VPCs > Check VPC `10.0.0.0/16` and S3 Gateway Endpoint are removed.
 
 ## Troubleshooting
 - **MongoDB**:
@@ -517,3 +574,7 @@ This phase involves configuring environment variables, setting up a GitHub Runne
   - Test upload: `echo "test" > /tmp/test.txt; sudo docker run --rm -v /tmp:/aws -e AWS_ACCESS_KEY_ID=<key> -e AWS_SECRET_ACCESS_KEY=<secret> -e AWS_DEFAULT_REGION=ap-southeast-1 amazon/aws-cli s3 cp /aws/test.txt s3://gearment-app-db-backups-bucket/test.txt`
 - **CI/CD**:
   - Check GitHub Actions logs in repository
+
+## Video Demo
+Watch a step-by-step demonstration of the entire deployment process, from infrastructure setup to application verification, on YouTube:
+- [**Demo Video**](https://www.youtube.com/watch?v=1wrc6PbEo0o)

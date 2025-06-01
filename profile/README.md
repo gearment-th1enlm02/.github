@@ -64,6 +64,12 @@ This is a project that deploys a web application on AWS, featuring a React front
 - GitHub Actions: Builds Docker images, pushes to Docker Hub, deploys to EC2
 - Config: `.github/workflows/main.yml` in app repositories
 
+<br/>
+
+<p align="center">
+  <img src="../images/application-workflow.png" alt="Application"/>
+</p>
+
 ## Deployment Instructions
 
 ### Phase 1: Automated Infrastructure Setup

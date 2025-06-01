@@ -28,6 +28,10 @@ This is a project that deploys a web application on AWS, featuring a React front
   - Components: Internet Gateway, Route Table
 - **Repository**: [gearment-terraform](https://github.com/gearment-th1enlm02/gearment-terraform)
 
+<p align="center">
+  <img src="../images/aws-infrastructure.png" alt="Infrastructure"/>
+</p>
+
 ### Application
 - **Back-end**:
   - Node.js API, connects to MongoDB
